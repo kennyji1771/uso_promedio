@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Nexus - Uso correcto de promedios</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg-dark: radial-gradient(circle at 10% 20%, #0a0f1f, #03050a);
+            --card-bg: rgba(18,24,43,0.7);
+            --glass-border: rgba(255,255,255,0.15);
+            --accent: #00b4d8;
+            --text-light: #eef2ff;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.5;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.dark-mode { background: var(--bg-dark); color: var(--text-light); }
+        body.dark-mode .sidebar, body.dark-mode .content-area, body.dark-mode .header {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+        }
+        .container { max-width: 1400px; margin:0 auto; padding:1.5rem 1rem; }
+        .header {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-area { display: flex; align-items: center; gap: 1rem; }
+        .logo-img { height: 50px; width: auto; object-fit: contain; background: white; border-radius: 1rem; padding: 5px; }
+        .institucion-info h2 { font-size: 1.4rem; font-weight: 700; }
+        .tutor-name { font-size: 0.9rem; color: #bfdbfe; }
+        .user-info { font-size: 0.9rem; text-align: right; }
+        .main-layout { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
+        .sidebar {
+            flex: 0 0 320px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 1.5rem;
+        }
+        .content-area {
+            flex: 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+        .tree { list-style: none; padding-left: 0; }
+        .tree li { margin: 0.5rem 0; }
+        .tree details { margin-left: 0.5rem; }
+        .tree summary { font-weight: 600; color: var(--accent); cursor: pointer; padding: 0.3rem 0; display: flex; align-items: center; gap: 0.5rem; }
+        .tree .tema-item { padding-left: 1.8rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 1rem; padding: 0.2rem 0; }
+        .tree .tema-item.completado { text-decoration: line-through; opacity: 0.7; }
+        .tree .tema-item:hover { background: rgba(255,255,255,0.1); }
+        .completado-badge { color: #10b981; }
+        .btn-completar { background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 2rem; cursor: pointer; margin-top: 1rem; transition:0.2s; }
+        .btn-completar:hover { transform: scale(1.02); background: #0e9f6e; }
+        .tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 1rem; flex-wrap: wrap; }
+        .tab-btn { background: none; border: none; color: var(--text-light); padding: 0.5rem 1rem; cursor: pointer; font-weight: 500; transition:0.2s; border-radius: 2rem; }
+        .tab-btn.active { background: var(--accent); color: #0a0f1f; }
+        .tab-pane { display: none; animation: fade 0.2s ease; }
+        .tab-pane.active { display: block; }
+        @keyframes fade { from { opacity:0; } to { opacity:1; } }
+        .arbol-resumen { background: rgba(0,0,0,0.3); padding:1rem; border-radius:1rem; font-family:monospace; font-size:0.85rem; margin:1rem 0; border-left:4px solid var(--accent); white-space:pre-wrap; overflow-x:auto; }
+        .glosario-buscador { margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .glosario-buscador input, .glosario-buscador select { padding: 0.5rem; border-radius: 2rem; border: none; background: rgba(255,255,255,0.1); color: white; }
+        .glosario-resultados .card { background: rgba(0,0,0,0.2); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; }
+        .modal {
+            display: none;
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: rgba(18,24,43,0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--accent);
+            border-radius: 2rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 550px;
+            color: white;
+        }
+        .modal-content .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .modal-content input, .modal-content select { width:100%; padding:0.6rem; border-radius:1rem; background:rgba(255,255,255,0.1); border:none; color:white; }
+        .modal-content button { background:linear-gradient(90deg,#00b4d8,#0077b6); border:none; padding:0.8rem; border-radius:2rem; color:white; font-weight:bold; cursor:pointer; width:100%; margin-top:1rem; }
+        .close-modal { float:right; font-size:1.5rem; cursor:pointer; }
+        .toast-success { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:8px 16px; border-radius:40px; z-index:1100; }
+        @media (max-width:768px) { .main-layout{flex-direction:column;} .sidebar{width:100%;} }
+        .btn-icon { background: var(--accent); border: none; padding: 0.3rem 0.8rem; border-radius: 2rem; color: #0a0f1f; cursor: pointer; margin-left: 0.5rem; }
+        .drawer { position:fixed; top:0; left:-320px; width:300px; height:100%; background:#0a0f1f; backdrop-filter:blur(16px); border-right:1px solid var(--accent); transition:left 0.3s; padding:2rem; z-index:200; }
+        .drawer.open { left:0; }
+        .drawer-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:199; display:none; }
+        .drawer-overlay.open { display:block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-area" id="institucion-header">
+                <img id="logo-img" class="logo-img" src="" alt="Logo" style="display:none;">
+                <div class="institucion-info">
+                    <h2 id="institucion-nombre">Cargando...</h2>
+                    <span id="tutor-info" class="tutor-name"></span>
+                </div>
+            </div>
+            <div class="user-info">
+                <span id="user-name-display"></span>
+                <button id="profileBtn" class="btn-icon"><i class="fas fa-user"></i> Perfil</button>
+                <button id="darkModeToggle" class="btn-icon"><i class="fas fa-moon"></i></button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <div class="sidebar">
+                <h3><i class="fas fa-sitemap"></i> Índice del curso</h3>
+                <div id="arbolNavegacion"></div>
+                <button id="btnGlosario" style="margin-top:1rem; background: var(--accent); border:none; padding:0.5rem; border-radius:2rem; width:100%; cursor:pointer;">📖 Glosario</button>
+                <div id="admin-panel" style="display:none; margin-top:1rem;">
+                    <button id="btnCargaMasiva" style="background:#10b981; width:100%;">📤 Carga masiva de curso</button>
+                    <input type="file" id="fileCursoInput" accept=".csv,.txt" style="display:none;">
+                </div>
+            </div>
+            <div class="content-area">
+                <div class="tabs" id="tabs-container" style="display:none;">
+                    <button class="tab-btn active" data-tab="contenido">📄 Contenido</button>
+                    <button class="tab-btn" data-tab="arbol">🌳 Mapa mental</button>
+                    <button class="tab-btn" data-tab="consideraciones">📌 Consideraciones</button>
+                    <button class="tab-btn" data-tab="biografia">📚 Biografía</button>
+                    <button class="tab-btn" data-tab="evaluacion">📝 Evaluación</button>
+                </div>
+                <div id="contenidoTema">
+                    <p>Seleccione un tema del índice.</p>
+                </div>
+                <button id="btnCompletarTema" class="btn-completar" style="display: none;">✓ Marcar como completado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal LOGIN -->
+    <div id="modalLogin" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeLoginBtn">&times;</span>
+            <h2>🔐 Iniciar sesión</h2>
+            <form id="loginForm">
+                <input type="text" id="loginCedula" placeholder="Cédula *" required>
+                <button type="submit">Ingresar</button>
+            </form>
+            <hr style="margin:1rem 0;">
+            <p>¿No tienes cuenta? <a href="#" id="showRegisterLink" style="color:var(--accent);">Regístrate aquí</a></p>
+        </div>
+    </div>
+
+    <!-- Modal REGISTRO -->
+    <div id="modalRegistro" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeRegistroBtn">&times;</span>
+            <h2>📝 Registro de nuevo usuario</h2>
+            <form id="registroForm">
+                <div class="grid-2">
+                    <input type="text" id="regCedula" placeholder="Cédula *" required>
+                    <input type="text" id="regNombre" placeholder="Nombre *" required>
+                    <input type="text" id="regApellido" placeholder="Apellido *" required>
+                    <input type="email" id="regEmail" placeholder="Email">
+                    <select id="regNivel">
+                        <option>Básico</option><option>Medio</option><option>Superior (Pregrado)</option><option>Superior (Postgrado)</option>
+                    </select>
+                </div>
+                <button type="submit">🎓 Registrarse</button>
+            </form>
+            <hr style="margin:1rem 0;">
+            <p>¿Ya tienes cuenta? <a href="#" id="showLoginLink" style="color:var(--accent);">Inicia sesión</a></p>
+        </div>
+    </div>
+
+    <!-- Modal glosario -->
+    <div id="modalGlosario" class="modal">
+        <div class="modal-content" style="max-width:800px;">
+            <span class="close-modal" id="closeGlosarioBtn">&times;</span>
+            <h2>📖 Glosario A-Z</h2>
+            <div class="glosario-buscador">
+                <input type="text" id="glosario-buscar" placeholder="Buscar por término o definición...">
+                <button id="glosario-btn" class="btn-icon">🔍 Buscar</button>
+            </div>
+            <div id="glosario-resultados" class="glosario-resultados"></div>
+        </div>
+    </div>
+
+    <!-- Drawer perfil -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="drawer" id="profileDrawer">
+        <button class="close-drawer" id="closeDrawerBtn">&times;</button>
+        <h3>Mi progreso</h3>
+        <p><strong>Avance:</strong> <span id="progresoStats">0%</span></p>
+        <p><strong>Temas completados:</strong> <span id="temasCompletados">0</span> / <span id="totalTemas">0</span></p>
+        <hr>
+        <p><i class="fas fa-database"></i> Progreso guardado localmente (próximamente en nube).</p>
+    </div>
+
+    <div id="toast" class="toast-success" style="display:none;"><i class="fas fa-check-circle"></i> <span id="toastMsg"></span></div>
+
+    <script>
+        // ================= CONFIGURACIÓN =================
+        let estructuraGlobal = null;
+        let progresoUsuario = {};
+        let usuarioActual = null;
+        let temasMap = new Map();
+        let glosarioData = [];
+
+        // API base (rutas relativas a la misma Vercel)
+        const API = '/api';
+
+        // ================= FUNCIONES DE COMUNICACIÓN =================
+        async function cargarContenidoCurso() {
+            try {
+                const res = await fetch(`${API}/contenido`);
+                const data = await res.json();
+                estructuraGlobal = data.contenido;
+                construirIndice();
+                if (data.institucion) {
+                    document.getElementById('institucion-nombre').innerText = data.institucion.nombre || 'Nexus Academy';
+                    document.getElementById('tutor-info').innerHTML = `Tutor: ${data.institucion.tutor || 'No asignado'}`;
+                    if (data.institucion.logoUrl) {
+                        const img = document.getElementById('logo-img');
+                        img.src = data.institucion.logoUrl;
+                        img.style.display = 'inline-block';
+                    }
+                }
+            } catch (err) {
+                mostrarToast('Error al cargar el contenido: ' + err.message);
+            }
+        }
+
+        async function iniciarSesion(cedula) {
+            try {
+                const res = await fetch(`${API}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cedula })
+                });
+                const usuario = await res.json();
+                if (usuario && usuario.cedula) {
+                    usuarioActual = usuario;
+                    localStorage.setItem('nexus_usuario', JSON.stringify(usuarioActual));
+                    document.getElementById('user-name-display').innerText = `${usuarioActual.nombre || ''} ${usuarioActual.apellido || ''}`.trim() || usuarioActual.cedula;
+                    // Mostrar panel de admin si corresponde
+                    if (usuarioActual.rol === 'admin') {
+                        document.getElementById('admin-panel').style.display = 'block';
+                    } else {
+                        document.getElementById('admin-panel').style.display = 'none';
+                    }
+                    cerrarModales();
+                    cargarProgresoLocal(); // usar localStorage mientras no tengamos backend de progreso
+                    mostrarToast(`Bienvenido, ${usuarioActual.nombre || usuarioActual.cedula}`);
+                } else {
+                    mostrarToast('Cédula no registrada. Por favor, regístrate.');
+                    mostrarModalRegistro();
+                }
+            } catch (err) {
+                mostrarToast('Error al iniciar sesión: ' + err.message);
+            }
+        }
+
+        async function registrarUsuario(datos) {
+            try {
+                const res = await fetch(`${API}/registro`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+                const response = await res.json();
+                if (response.success) {
+                    usuarioActual = datos;
+                    localStorage.setItem('nexus_usuario', JSON.stringify(usuarioActual));
+                    cerrarModales();
+                    cargarProgresoLocal();
+                    mostrarToast('Registro exitoso. ¡Bienvenido!');
+                } else {
+                    mostrarToast(response.error || 'Error en el registro');
+                }
+            } catch (err) {
+                mostrarToast('Error de conexión: ' + err.message);
+            }
+        }
+
+        async function cargarProgresoRemoto() {
+            // Por ahora usamos localStorage, luego conectamos con backend
+            cargarProgresoLocal();
+        }
+
+        async function sincronizarProgreso() {
+            // Guardar en backend cuando esté implementado
+            localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario));
+            // Opcional: enviar al servidor
+            if (usuarioActual) {
+                try {
+                    await fetch(`${API}/progreso`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cedula: usuarioActual.cedula, progreso: progresoUsuario })
+                    });
+                } catch(e) { console.warn('No se pudo sincronizar progreso', e); }
+            }
+        }
+
+        async function cargarGlosario() {
+            try {
+                const res = await fetch(`${API}/glosario`);
+                const data = await res.json();
+                glosarioData = data;
+            } catch (err) {
+                console.warn('Glosario no disponible');
+            }
+        }
+
+        // ================= FUNCIONES LOCALES =================
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function formatearTexto(texto) {
+            if (!texto) return "";
+            return texto.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        function actualizarEstadisticas() {
+            const total = document.querySelectorAll('.tema-item').length;
+            const comp = Object.keys(progresoUsuario).length;
+            const porc = total ? Math.round(comp / total * 100) : 0;
+            document.getElementById('progresoStats').innerText = porc + '%';
+            document.getElementById('temasCompletados').innerText = comp;
+            document.getElementById('totalTemas').innerText = total;
+        }
+
+        function cargarProgresoLocal() {
+            const guardado = localStorage.getItem(`nexus_progreso_${usuarioActual?.cedula}`);
+            if (guardado) {
+                progresoUsuario = JSON.parse(guardado);
+            } else {
+                progresoUsuario = {};
+            }
+            refrescarMarcasCompletados();
+            actualizarEstadisticas();
+        }
+
+        function guardarProgresoLocal() {
+            localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario));
+            actualizarEstadisticas();
+            sincronizarProgreso();
+        }
+
+        function marcarTemaCompletado(tema) {
+            if (progresoUsuario[tema.id]) return mostrarToast('Ya completado');
+            progresoUsuario[tema.id] = true;
+            guardarProgresoLocal();
+            mostrarToast(`¡"${tema.titulo}" completado!`);
+            const li = document.querySelector(`.tema-item[data-tema-id="${tema.id}"]`);
+            if (li) {
+                li.querySelector('i').className = 'fas fa-check-circle completado-badge';
+                li.classList.add('completado');
+            }
+            document.getElementById('btnCompletarTema').style.display = 'none';
+        }
+
+        function refrescarMarcasCompletados() {
+            document.querySelectorAll('.tema-item').forEach(li => {
+                let id = li.getAttribute('data-tema-id');
+                if (progresoUsuario[id]) {
+                    li.querySelector('i').className = 'fas fa-check-circle completado-badge';
+                    li.classList.add('completado');
+                } else {
+                    li.querySelector('i').className = 'far fa-circle';
+                    li.classList.remove('completado');
+                }
+            });
+        }
+
+        function construirIndice() {
+            const contenedor = document.getElementById('arbolNavegacion');
+            contenedor.innerHTML = '';
+            if (!estructuraGlobal || !estructuraGlobal.trayectos) return;
+            const trayecto = estructuraGlobal.trayectos[0];
+            const ul = document.createElement('ul'); ul.className = 'tree';
+            const liCurso = document.createElement('li');
+            const detailsCurso = document.createElement('details');
+            detailsCurso.open = false;
+            const summaryCurso = document.createElement('summary');
+            summaryCurso.innerHTML = `<i class="fas fa-graduation-cap"></i> ${trayecto.titulo}`;
+            detailsCurso.appendChild(summaryCurso);
+            const ulSem = document.createElement('ul');
+            (trayecto.semestres || []).forEach(sem => {
+                const liSem = document.createElement('li');
+                const detSem = document.createElement('details');
+                detSem.open = false;
+                const sumSem = document.createElement('summary');
+                sumSem.innerHTML = `<i class="fas fa-calendar-alt"></i> ${sem.titulo}`;
+                detSem.appendChild(sumSem);
+                const ulMod = document.createElement('ul');
+                (sem.modulos || []).forEach(mod => {
+                    const liMod = document.createElement('li');
+                    const detMod = document.createElement('details');
+                    detMod.open = false;
+                    const sumMod = document.createElement('summary');
+                    sumMod.innerHTML = `<i class="fas fa-chalkboard"></i> ${mod.titulo}`;
+                    detMod.appendChild(sumMod);
+                    const ulTem = document.createElement('ul');
+                    (mod.temas || []).forEach(tema => {
+                        temasMap.set(tema.id, tema);
+                        const liTem = document.createElement('li');
+                        liTem.className = 'tema-item';
+                        liTem.setAttribute('data-tema-id', tema.id);
+                        const icon = document.createElement('i');
+                        icon.className = progresoUsuario[tema.id] ? 'fas fa-check-circle completado-badge' : 'far fa-circle';
+                        const span = document.createElement('span');
+                        span.textContent = tema.titulo;
+                        liTem.appendChild(icon);
+                        liTem.appendChild(span);
+                        liTem.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            mostrarTema(tema);
+                        });
+                        ulTem.appendChild(liTem);
+                    });
+                    detMod.appendChild(ulTem);
+                    liMod.appendChild(detMod);
+                    ulMod.appendChild(liMod);
+                });
+                detSem.appendChild(ulMod);
+                liSem.appendChild(detSem);
+                ulSem.appendChild(liSem);
+            });
+            detailsCurso.appendChild(ulSem);
+            liCurso.appendChild(detailsCurso);
+            ul.appendChild(liCurso);
+            contenedor.appendChild(ul);
+            actualizarEstadisticas();
+        }
+
+        let temaActual = null;
+        function mostrarTema(tema) {
+            temaActual = tema;
+            document.getElementById('tabs-container').style.display = 'flex';
+            document.getElementById('contenidoTema').innerHTML = `
+                <div class="tab-pane active" id="tab-contenido">${formatearTexto(tema.contenido || '')}</div>
+                <div class="tab-pane" id="tab-arbol"><pre class="arbol-resumen">${tema.arbol || 'No hay mapa mental disponible.'}</pre></div>
+                <div class="tab-pane" id="tab-consideraciones">${formatearTexto(tema.consideraciones || '')}</div>
+                <div class="tab-pane" id="tab-biografia">${formatearTexto(tema.biografia || '')}</div>
+                <div class="tab-pane" id="tab-evaluacion">${tema.evaluacion ? formatearTexto(tema.evaluacion) : 'No hay evaluación configurada.'}</div>
+            `;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.tab-btn[data-tab="contenido"]').classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-contenido').classList.add('active');
+
+            const btnCompletar = document.getElementById('btnCompletarTema');
+            if (progresoUsuario[tema.id]) btnCompletar.style.display = 'none';
+            else { btnCompletar.style.display = 'block'; btnCompletar.onclick = () => marcarTemaCompletado(tema); }
+        }
+
+        async function cargarCursoMasivo(file) {
+            if (!usuarioActual || usuarioActual.rol !== 'admin') {
+                mostrarToast('No autorizado');
+                return;
+            }
+            const text = await file.text();
+            const res = await fetch(`${API}/carga-masiva`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminCedula: usuarioActual.cedula, csvContent: text })
+            });
+            const result = await res.json();
+            if (result.success) {
+                mostrarToast(`✅ Curso cargado: ${result.filasAgregadas} temas agregados. Recargando...`);
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                mostrarToast('❌ Error: ' + (result.error || 'desconocido'));
+            }
+        }
+
+        // ================= MANEJO DE MODALES =================
+        function mostrarModalLogin() { document.getElementById('modalLogin').classList.add('active'); }
+        function mostrarModalRegistro() { document.getElementById('modalRegistro').classList.add('active'); }
+        function cerrarModales() {
+            document.getElementById('modalLogin').classList.remove('active');
+            document.getElementById('modalRegistro').classList.remove('active');
+        }
+
+        function initUI() {
+            // Login
+            document.getElementById('loginForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                iniciarSesion(document.getElementById('loginCedula').value);
+            });
+            document.getElementById('closeLoginBtn').addEventListener('click', cerrarModales);
+            // Registro
+            document.getElementById('registroForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                registrarUsuario({
+                    cedula: document.getElementById('regCedula').value,
+                    nombre: document.getElementById('regNombre').value,
+                    apellido: document.getElementById('regApellido').value,
+                    email: document.getElementById('regEmail').value,
+                    nivelEducativo: document.getElementById('regNivel').value
+                });
+            });
+            document.getElementById('closeRegistroBtn').addEventListener('click', cerrarModales);
+            document.getElementById('showRegisterLink').addEventListener('click', (e) => {
+                e.preventDefault(); cerrarModales(); mostrarModalRegistro();
+            });
+            document.getElementById('showLoginLink').addEventListener('click', (e) => {
+                e.preventDefault(); cerrarModales(); mostrarModalLogin();
+            });
+            // Glosario
+            document.getElementById('closeGlosarioBtn').addEventListener('click', () => document.getElementById('modalGlosario').classList.remove('active'));
+            document.getElementById('btnGlosario').addEventListener('click', () => {
+                document.getElementById('modalGlosario').classList.add('active');
+                if (glosarioData.length === 0) cargarGlosario();
+            });
+            document.getElementById('glosario-btn').addEventListener('click', () => {
+                const texto = document.getElementById('glosario-buscar').value.toLowerCase();
+                const resultados = glosarioData.filter(item => 
+                    (item.termino && item.termino.toLowerCase().includes(texto)) ||
+                    (item.definicion && item.definicion.toLowerCase().includes(texto))
+                );
+                const container = document.getElementById('glosario-resultados');
+                if (resultados.length === 0) { container.innerHTML = '<p>No se encontraron resultados.</p>'; return; }
+                let html = '';
+                for (let r of resultados) {
+                    html += `<div class="card" style="margin-bottom:1rem; padding:0.8rem; background:rgba(0,0,0,0.2);">
+                        <strong>${r.termino}</strong> ${r.categoria ? `(${r.categoria})` : ''}<br>
+                        ${r.definicion ? `<p><strong>Definición:</strong> ${r.definicion}</p>` : ''}
+                        ${r.solucion ? `<p><strong>Solución:</strong> ${r.solucion}</p>` : ''}
+                        ${r.fuente ? `<p><strong>Fuente:</strong> ${r.fuente}</p>` : ''}
+                        ${r.ejemplo ? `<p><strong>Ejemplo:</strong> ${r.ejemplo}</p>` : ''}
+                        ${r.url ? `<p><strong>Más info:</strong> <a href="${r.url}" target="_blank">${r.url}</a></p>` : ''}
+                    </div>`;
+                }
+                container.innerHTML = html;
+            });
+            // Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                    document.getElementById(`tab-${tab}`).classList.add('active');
+                });
+            });
+            // Modo oscuro
+            const darkBtn = document.getElementById('darkModeToggle');
+            darkBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+            });
+            if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
+            // Drawer
+            const profileBtn = document.getElementById('profileBtn');
+            const drawer = document.getElementById('profileDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            const closeDrawer = document.getElementById('closeDrawerBtn');
+            profileBtn.addEventListener('click', () => { drawer.classList.add('open'); overlay.classList.add('open'); });
+            closeDrawer.addEventListener('click', () => { drawer.classList.remove('open'); overlay.classList.remove('open'); });
+            overlay.addEventListener('click', () => { drawer.classList.remove('open'); overlay.classList.remove('open'); });
+
+            // Carga masiva
+            const btnCarga = document.getElementById('btnCargaMasiva');
+            const fileInput = document.getElementById('fileCursoInput');
+            if (btnCarga) {
+                btnCarga.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length) cargarCursoMasivo(e.target.files[0]);
+                    fileInput.value = '';
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initUI();
+            const usuarioGuardado = localStorage.getItem('nexus_usuario');
+            if (usuarioGuardado) {
+                usuarioActual = JSON.parse(usuarioGuardado);
+                document.getElementById('user-name-display').innerText = `${usuarioActual.nombre || ''} ${usuarioActual.apellido || ''}`.trim() || usuarioActual.cedula;
+                if (usuarioActual.rol === 'admin') document.getElementById('admin-panel').style.display = 'block';
+                cargarProgresoLocal();
+            } else {
+                mostrarModalLogin();
+            }
+            cargarContenidoCurso();
+        });
+    </script>
+</body>
+</html>

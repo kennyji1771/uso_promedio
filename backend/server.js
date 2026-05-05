@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // Servir archivos estáticos desde frontend
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../')));
 
 // --- Rutas de ejemplo ---
 let contenidoCurso = {
