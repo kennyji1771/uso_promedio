@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nexus - Promedios</title>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial; background: #0a0f1f; color: white; padding: 2rem; }
+    button { background: #00b4d8; border: none; padding: 0.5rem 1rem; border-radius: 1rem; cursor: pointer; margin: 0.5rem; }
+    #contenido { background: #1e2a3a; padding: 1rem; border-radius: 1rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📊 Uso correcto de promedios</h1>
+  <div>
+    <label>Cédula: <input id="cedula" value="admin"></label>
+    <button id="btnLogin">Iniciar sesión</button>
+    <button id="btnCargaMasiva" style="display:none;">Cargar curso CSV</button>
+    <input type="file" id="fileInput" accept=".csv" style="display:none;">
+  </div>
+  <div id="contenido"></div>
+  <script>
+    let usuarioActual = null;
+    const API = 'http://localhost:3000/api';
+
+    document.getElementById('btnLogin').onclick = async () => {
+      const cedula = document.getElementById('cedula').value;
+      const res = await fetch(`${API}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula })
+      });
+      usuarioActual = await res.json();
+      if (usuarioActual.rol === 'admin') {
+        document.getElementById('btnCargaMasiva').style.display = 'inline-block';
+      }
+      cargarContenido();
+    };
+
+    async function cargarContenido() {
+      const res = await fetch(`${API}/contenido`);
+      const data = await res.json();
+      const modulos = data.contenido.trayectos[0].semestres[0].modulos;
+      let html = '';
+      modulos.forEach(mod => {
+        html += `<h2>${mod.titulo}</h2><ul>`;
+        mod.temas.forEach(tema => {
+          html += `<li><strong>${tema.titulo}</strong><br>${tema.contenido.substring(0,100)}...</li>`;
+        });
+        html += `</ul>`;
+      });
+      document.getElementById('contenido').innerHTML = html;
+    }
+
+    // Carga masiva
+    document.getElementById('btnCargaMasiva').onclick = () => {
+      document.getElementById('fileInput').click();
+    };
+    document.getElementById('fileInput').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const res = await fetch(`${API}/carga-masiva`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminCedula: usuarioActual.cedula, csvContent: text })
+      });
+      const result = await res.json();
+      alert(result.success ? 'Cargado correctamente' : 'Error');
+      cargarContenido();
+    };
+  </script>
+</body>
+</html>
