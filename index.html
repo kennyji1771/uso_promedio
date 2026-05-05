@@ -80,7 +80,7 @@
         .tab-pane { display: none; animation: fade 0.2s ease; }
         .tab-pane.active { display: block; }
         @keyframes fade { from { opacity:0; } to { opacity:1; } }
-        .arbol-visual { background: rgba(0,0,0,0.3); padding:1rem; border-radius:1rem; margin:1rem 0; border-left:4px solid var(--accent); overflow-x: auto; }
+        .arbol-visual { font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 1rem; overflow-x: auto; white-space: pre-wrap; }
         .glosario-buscador { margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
         .glosario-buscador input, .glosario-buscador select { padding: 0.5rem; border-radius: 2rem; border: none; background: rgba(255,255,255,0.1); color: white; }
         .glosario-resultados .card { background: rgba(0,0,0,0.2); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; }
@@ -232,68 +232,10 @@
         let temasMap = new Map();
         let glosarioData = [];
 
-        // API base (ruta relativa para producción)
+        // API base (rutas relativas)
         const API = '/api';
 
-        // ================= FUNCIONES AUXILIARES =================
-        function mostrarToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg;
-            toast.style.display = 'flex';
-            setTimeout(() => toast.style.display = 'none', 3000);
-        }
-
-        function formatearTexto(texto) {
-            if (!texto) return "";
-            return texto.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        }
-
-        function escapeHtml(texto) {
-            return texto.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function formatearArbol(textoArbol) {
-            if (!textoArbol || textoArbol.trim() === '') return '<em>No hay mapa mental disponible.</em>';
-            const lineas = textoArbol.split(/\r?\n/).filter(l => l.trim() !== '');
-            if (lineas.length === 0) return '<em>No hay contenido jerárquico.</em>';
-            // Calcular niveles por espacios iniciales (4 espacios = 1 nivel)
-            const items = lineas.map(linea => {
-                let nivel = 0;
-                const match = linea.match(/^(\s+)/);
-                if (match) {
-                    nivel = Math.floor(match[1].length / 4);
-                }
-                return { texto: linea.trim(), nivel };
-            });
-            let html = '<div class="arbol-visual" style="font-family: monospace; line-height: 1.5;">';
-            for (let i = 0; i < items.length; i++) {
-                const actual = items[i];
-                const siguiente = items[i+1];
-                let esUltimo = false;
-                if (!siguiente) esUltimo = true;
-                else if (siguiente.nivel < actual.nivel) esUltimo = true;
-                else if (siguiente.nivel === actual.nivel) esUltimo = false;
-                else if (siguiente.nivel > actual.nivel) esUltimo = false;
-                
-                let prefijo = '';
-                for (let j = 0; j < actual.nivel; j++) {
-                    prefijo += '│   ';
-                }
-                if (actual.nivel > 0) {
-                    prefijo = prefijo.slice(0, -4) + (esUltimo ? '└── ' : '├── ');
-                }
-                html += `<div>${escapeHtml(prefijo)}${escapeHtml(actual.texto)}</div>`;
-            }
-            html += '</div>';
-            return html;
-        }
-
-        // ================= COMUNICACIÓN CON EL BACKEND =================
+        // ================= FUNCIONES DE COMUNICACIÓN =================
         async function cargarContenidoCurso() {
             try {
                 const res = await fetch(`${API}/contenido`);
@@ -304,8 +246,9 @@
                     document.getElementById('institucion-nombre').innerText = data.institucion.nombre || 'Nexus Academy';
                     document.getElementById('tutor-info').innerHTML = `Tutor: ${data.institucion.tutor || 'No asignado'}`;
                     if (data.institucion.logoUrl) {
-                        document.getElementById('logo-img').src = data.institucion.logoUrl;
-                        document.getElementById('logo-img').style.display = 'inline-block';
+                        const img = document.getElementById('logo-img');
+                        img.src = data.institucion.logoUrl;
+                        img.style.display = 'inline-block';
                     }
                 }
             } catch (err) {
@@ -364,10 +307,7 @@
             }
         }
 
-        async function cargarProgresoRemoto() {
-            cargarProgresoLocal();
-        }
-
+        async function cargarProgresoRemoto() { cargarProgresoLocal(); }
         async function sincronizarProgreso() {
             localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario));
             if (usuarioActual) {
@@ -391,27 +331,75 @@
             }
         }
 
-        async function cargarCursoMasivo(file) {
-            if (!usuarioActual || usuarioActual.rol !== 'admin') {
-                mostrarToast('No autorizado');
-                return;
-            }
-            const text = await file.text();
-            const res = await fetch(`${API}/carga-masiva`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adminCedula: usuarioActual.cedula, csvContent: text })
-            });
-            const result = await res.json();
-            if (result.success) {
-                mostrarToast(`✅ Curso cargado: ${result.filasAgregadas} temas agregados. Recargando...`);
-                setTimeout(() => location.reload(), 2000);
-            } else {
-                mostrarToast('❌ Error: ' + (result.error || 'desconocido'));
-            }
+        // ================= FUNCIONES LOCALES =================
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => toast.style.display = 'none', 3000);
         }
 
-        // ================= PROGRESO LOCAL =================
+        function formatearTexto(texto) {
+            if (!texto) return "";
+            return texto.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        function escapeHtml(texto) {
+            return texto.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function formatearArbol(textoArbol) {
+            if (!textoArbol || textoArbol.trim() === '') return '<em>No hay mapa mental disponible.</em>';
+            const lineas = textoArbol.split(/\r?\n/);
+            const lineasFiltradas = lineas.filter(linea => linea.trim() !== '');
+            if (lineasFiltradas.length === 0) return '<em>No hay contenido jerárquico.</em>';
+            
+            const items = lineasFiltradas.map(linea => {
+                let nivel = 0;
+                const match = linea.match(/^(\s+)/);
+                if (match) {
+                    nivel = Math.floor(match[1].length / 4); // 4 espacios por nivel
+                }
+                return { texto: linea.trim(), nivel };
+            });
+            
+            let html = '<div class="arbol-visual">';
+            for (let i = 0; i < items.length; i++) {
+                const actual = items[i];
+                const siguiente = items[i+1];
+                let esUltimo = false;
+                if (!siguiente) esUltimo = true;
+                else if (siguiente.nivel < actual.nivel) esUltimo = true;
+                else if (siguiente.nivel === actual.nivel) esUltimo = false;
+                else if (siguiente.nivel > actual.nivel) esUltimo = false;
+                
+                let prefijo = '';
+                for (let j = 0; j < actual.nivel; j++) {
+                    prefijo += '│   ';
+                }
+                if (actual.nivel > 0) {
+                    prefijo = prefijo.slice(0, -4) + (esUltimo ? '└── ' : '├── ');
+                }
+                html += `<div>${escapeHtml(prefijo)}${escapeHtml(actual.texto)}</div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function actualizarEstadisticas() {
+            const total = document.querySelectorAll('.tema-item').length;
+            const comp = Object.keys(progresoUsuario).length;
+            const porc = total ? Math.round(comp / total * 100) : 0;
+            document.getElementById('progresoStats').innerText = porc + '%';
+            document.getElementById('temasCompletados').innerText = comp;
+            document.getElementById('totalTemas').innerText = total;
+        }
+
         function cargarProgresoLocal() {
             const guardado = localStorage.getItem(`nexus_progreso_${usuarioActual?.cedula}`);
             if (guardado) {
@@ -427,15 +415,6 @@
             localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario));
             actualizarEstadisticas();
             sincronizarProgreso();
-        }
-
-        function actualizarEstadisticas() {
-            const total = document.querySelectorAll('.tema-item').length;
-            const comp = Object.keys(progresoUsuario).length;
-            const porc = total ? Math.round(comp / total * 100) : 0;
-            document.getElementById('progresoStats').innerText = porc + '%';
-            document.getElementById('temasCompletados').innerText = comp;
-            document.getElementById('totalTemas').innerText = total;
         }
 
         function marcarTemaCompletado(tema) {
@@ -464,7 +443,6 @@
             });
         }
 
-        // ================= ÍNDICE Y VISUALIZACIÓN =================
         function construirIndice() {
             const contenedor = document.getElementById('arbolNavegacion');
             contenedor.innerHTML = '';
@@ -531,6 +509,7 @@
             temaActual = tema;
             document.getElementById('tabs-container').style.display = 'flex';
             const arbolHtml = tema.arbol ? formatearArbol(tema.arbol) : '<em>No hay mapa mental disponible.</em>';
+            
             document.getElementById('contenidoTema').innerHTML = `
                 <div class="tab-pane active" id="tab-contenido">${formatearTexto(tema.contenido || '')}</div>
                 <div class="tab-pane" id="tab-arbol">${arbolHtml}</div>
@@ -538,6 +517,7 @@
                 <div class="tab-pane" id="tab-biografia">${formatearTexto(tema.biografia || '')}</div>
                 <div class="tab-pane" id="tab-evaluacion">${tema.evaluacion ? formatearTexto(tema.evaluacion) : 'No hay evaluación configurada.'}</div>
             `;
+            
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector('.tab-btn[data-tab="contenido"]').classList.add('active');
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -548,7 +528,27 @@
             else { btnCompletar.style.display = 'block'; btnCompletar.onclick = () => marcarTemaCompletado(tema); }
         }
 
-        // ================= MODALES =================
+        async function cargarCursoMasivo(file) {
+            if (!usuarioActual || usuarioActual.rol !== 'admin') {
+                mostrarToast('No autorizado');
+                return;
+            }
+            const text = await file.text();
+            const res = await fetch(`${API}/carga-masiva`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminCedula: usuarioActual.cedula, csvContent: text })
+            });
+            const result = await res.json();
+            if (result.success) {
+                mostrarToast(`✅ Curso cargado: ${result.filasAgregadas} temas agregados. Recargando...`);
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                mostrarToast('❌ Error: ' + (result.error || 'desconocido'));
+            }
+        }
+
+        // ================= MANEJO DE MODALES =================
         function mostrarModalLogin() { document.getElementById('modalLogin').classList.add('active'); }
         function mostrarModalRegistro() { document.getElementById('modalRegistro').classList.add('active'); }
         function cerrarModales() {
@@ -587,9 +587,8 @@
                 document.getElementById('modalGlosario').classList.add('active');
                 if (glosarioData.length === 0) cargarGlosario();
             });
-            document.getElementById('glosario-btn').addEventListener('click', async () => {
+            document.getElementById('glosario-btn').addEventListener('click', () => {
                 const texto = document.getElementById('glosario-buscar').value.toLowerCase();
-                if (glosarioData.length === 0) await cargarGlosario();
                 const resultados = glosarioData.filter(item => 
                     (item.termino && item.termino.toLowerCase().includes(texto)) ||
                     (item.definicion && item.definicion.toLowerCase().includes(texto))
@@ -599,12 +598,12 @@
                 let html = '';
                 for (let r of resultados) {
                     html += `<div class="card" style="margin-bottom:1rem; padding:0.8rem; background:rgba(0,0,0,0.2);">
-                        <strong>${r.termino}</strong> ${r.categoria ? `(${r.categoria})` : ''}<br>
-                        ${r.definicion ? `<p><strong>Definición:</strong> ${r.definicion}</p>` : ''}
-                        ${r.solucion ? `<p><strong>Solución:</strong> ${r.solucion}</p>` : ''}
-                        ${r.fuente ? `<p><strong>Fuente:</strong> ${r.fuente}</p>` : ''}
-                        ${r.ejemplo ? `<p><strong>Ejemplo:</strong> ${r.ejemplo}</p>` : ''}
-                        ${r.url ? `<p><strong>Más info:</strong> <a href="${r.url}" target="_blank">${r.url}</a></p>` : ''}
+                        <strong>${escapeHtml(r.termino)}</strong> ${r.categoria ? `(${escapeHtml(r.categoria)})` : ''}<br>
+                        ${r.definicion ? `<p><strong>Definición:</strong> ${escapeHtml(r.definicion)}</p>` : ''}
+                        ${r.solucion ? `<p><strong>Solución:</strong> ${escapeHtml(r.solucion)}</p>` : ''}
+                        ${r.fuente ? `<p><strong>Fuente:</strong> ${escapeHtml(r.fuente)}</p>` : ''}
+                        ${r.ejemplo ? `<p><strong>Ejemplo:</strong> ${escapeHtml(r.ejemplo)}</p>` : ''}
+                        ${r.url ? `<p><strong>Más info:</strong> <a href="${r.url}" target="_blank">${escapeHtml(r.url)}</a></p>` : ''}
                     </div>`;
                 }
                 container.innerHTML = html;
@@ -634,6 +633,7 @@
             profileBtn.addEventListener('click', () => { drawer.classList.add('open'); overlay.classList.add('open'); });
             closeDrawer.addEventListener('click', () => { drawer.classList.remove('open'); overlay.classList.remove('open'); });
             overlay.addEventListener('click', () => { drawer.classList.remove('open'); overlay.classList.remove('open'); });
+
             // Carga masiva
             const btnCarga = document.getElementById('btnCargaMasiva');
             const fileInput = document.getElementById('fileCursoInput');
