@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Nexus - Uso correcto de promedios</title>
+    <title>Nexus - Cursos Interactivos</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- PDF.js para extraer texto de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -120,8 +119,6 @@
         .drawer.open { left:0; }
         .drawer-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:199; display:none; }
         .drawer-overlay.open { display:block; }
-        .csv-editor { font-family: monospace; white-space: pre; background: #0a0f1f; border:1px solid var(--accent); }
-        /* Dropdown admin */
         .dropdown-admin button { font-size: 1rem; background: var(--accent); border: none; border-radius: 2rem; padding: 0.5rem; width:100%; cursor:pointer; color:#0a0f1f; font-weight:bold; }
         #adminDropdownMenu { background: #1e2a3a; border-radius: 1rem; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.3); }
         #adminDropdownMenu button { background: transparent; color: white; margin: 0; border-radius: 0; text-align: left; padding: 0.6rem 1rem; width:100%; }
@@ -154,12 +151,14 @@
                     <div class="dropdown-admin">
                         <button id="adminDropdownBtn">⚙️ Herramientas admin ▼</button>
                         <div id="adminDropdownMenu" style="display:none;">
-                            <button id="btnCargaMasiva">📤 Cargar CSV</button>
-                            <button id="btnSubirPDF">📑 Subir PDF</button>
+                            <button id="btnCargaMasiva">📤 Cargar CSV (curso)</button>
+                            <button id="btnSubirPDF">📑 Subir PDF (curso)</button>
+                            <button id="btnCargarGlosario">📖 Cargar glosario (CSV)</button>
                         </div>
                     </div>
                     <input type="file" id="fileCursoInput" accept=".csv,.txt" style="display:none;">
                     <input type="file" id="pdfInput" accept="application/pdf" style="display:none;">
+                    <input type="file" id="glosarioInput" accept=".csv,.txt" style="display:none;">
                 </div>
             </div>
             <div class="content-area">
@@ -178,7 +177,7 @@
         </div>
     </div>
 
-    <!-- Modal LOGIN -->
+    <!-- Modales -->
     <div id="modalLogin" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeLoginBtn">&times;</span>
@@ -187,16 +186,14 @@
                 <input type="text" id="loginCedula" placeholder="Cédula *" required>
                 <button type="submit">Ingresar</button>
             </form>
-            <hr style="margin:1rem 0;">
-            <p>¿No tienes cuenta? <a href="#" id="showRegisterLink" style="color:var(--accent);">Regístrate aquí</a></p>
+            <hr><p>¿No tienes cuenta? <a href="#" id="showRegisterLink" style="color:var(--accent);">Regístrate aquí</a></p>
         </div>
     </div>
 
-    <!-- Modal REGISTRO -->
     <div id="modalRegistro" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeRegistroBtn">&times;</span>
-            <h2>📝 Registro de nuevo usuario</h2>
+            <h2>📝 Registro</h2>
             <form id="registroForm">
                 <div class="grid-2">
                     <input type="text" id="regCedula" placeholder="Cédula *" required>
@@ -204,21 +201,19 @@
                     <input type="text" id="regApellido" placeholder="Apellido *" required>
                     <input type="email" id="regEmail" placeholder="Email">
                     <select id="regNivel">
-                        <option>Básico</option><option>Medio</option><option>Superior (Pregrado)</option><option>Superior (Postgrado)</option>
+                        <option>Básico</option><option>Medio</option><option>Superior</option>
                     </select>
                 </div>
-                <button type="submit">🎓 Registrarse</button>
+                <button type="submit">Registrarse</button>
             </form>
-            <hr style="margin:1rem 0;">
-            <p>¿Ya tienes cuenta? <a href="#" id="showLoginLink" style="color:var(--accent);">Inicia sesión</a></p>
+            <hr><p>¿Ya tienes cuenta? <a href="#" id="showLoginLink" style="color:var(--accent);">Inicia sesión</a></p>
         </div>
     </div>
 
-    <!-- Modal glosario -->
     <div id="modalGlosario" class="modal">
         <div class="modal-content" style="max-width:800px;">
             <span class="close-modal" id="closeGlosarioBtn">&times;</span>
-            <h2>📖 Glosario A-Z</h2>
+            <h2>📖 Glosario</h2>
             <div class="glosario-buscador">
                 <input type="text" id="glosario-buscar" placeholder="Buscar...">
                 <button id="glosario-btn" class="btn-icon">🔍 Buscar</button>
@@ -227,21 +222,30 @@
         </div>
     </div>
 
-    <!-- Drawer perfil -->
+    <div id="modalPDFEditor" class="modal">
+        <div class="modal-content" style="max-width: 90%;">
+            <span class="close-modal" id="closePDFModal">&times;</span>
+            <h3>✏️ Editar CSV generado desde PDF</h3>
+            <textarea id="csvEditorText" rows="15" style="width:100%; background:#0a0f1f; color:#eee; font-family:monospace;"></textarea>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button id="btnGuardarCSV" style="background:#10b981;">📥 Cargar este curso</button>
+                <button id="btnCancelarCSV" style="background:#555;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="drawer-overlay" id="drawerOverlay"></div>
     <div class="drawer" id="profileDrawer">
         <button class="close-drawer" id="closeDrawerBtn">&times;</button>
         <h3>Mi progreso</h3>
         <p><strong>Avance:</strong> <span id="progresoStats">0%</span></p>
         <p><strong>Temas completados:</strong> <span id="temasCompletados">0</span> / <span id="totalTemas">0</span></p>
-        <hr>
-        <p><i class="fas fa-database"></i> Progreso guardado localmente.</p>
+        <hr><p>Progreso guardado localmente.</p>
     </div>
 
     <div id="toast" class="toast-success" style="display:none;"><i class="fas fa-check-circle"></i> <span id="toastMsg"></span></div>
 
     <script>
-        // Configurar PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         let estructuraGlobal = null;
@@ -311,11 +315,11 @@
             } catch(err) { mostrarToast('Error registro'); }
         }
 
-        async function sincronizarProgreso() {
-            localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario));
-            if (usuarioActual) {
-                try { await fetch(`${API}/progreso`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ cedula:usuarioActual.cedula, progreso:progresoUsuario }) }); } catch(e){}
-            }
+        async function cargarGlosario() {
+            try {
+                const res = await fetch(`${API}/glosario`);
+                glosarioData = await res.json();
+            } catch(e) { console.warn(e); }
         }
 
         function mostrarToast(msg) { let t=document.getElementById('toast'); document.getElementById('toastMsg').innerText=msg; t.style.display='flex'; setTimeout(()=>t.style.display='none',3000); }
@@ -346,7 +350,7 @@
 
         function actualizarEstadisticas() { let total = document.querySelectorAll('.tema-item').length, comp = Object.keys(progresoUsuario).length, porc = total?Math.round(comp/total*100):0; document.getElementById('progresoStats').innerText=porc+'%'; document.getElementById('temasCompletados').innerText=comp; document.getElementById('totalTemas').innerText=total; }
         function cargarProgresoLocal() { let guardado = localStorage.getItem(`nexus_progreso_${usuarioActual?.cedula}`); progresoUsuario = guardado?JSON.parse(guardado):{}; refrescarMarcasCompletados(); actualizarEstadisticas(); }
-        function guardarProgresoLocal() { localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario)); actualizarEstadisticas(); sincronizarProgreso(); }
+        function guardarProgresoLocal() { localStorage.setItem(`nexus_progreso_${usuarioActual?.cedula}`, JSON.stringify(progresoUsuario)); actualizarEstadisticas(); }
         function marcarTemaCompletado(tema) { if (progresoUsuario[tema.id]) return mostrarToast('Ya completado'); progresoUsuario[tema.id]=true; guardarProgresoLocal(); mostrarToast(`¡${tema.titulo} completado!`); let li = document.querySelector(`.tema-item[data-tema-id="${tema.id}"]`); if(li) { li.querySelector('i').className='fas fa-check-circle completado-badge'; li.classList.add('completado'); } document.getElementById('btnCompletarTema').style.display='none'; }
         function refrescarMarcasCompletados() { document.querySelectorAll('.tema-item').forEach(li=>{ let id=li.getAttribute('data-tema-id'); if(progresoUsuario[id]) { li.querySelector('i').className='fas fa-check-circle completado-badge'; li.classList.add('completado'); } else { li.querySelector('i').className='far fa-circle'; li.classList.remove('completado'); } }); }
 
@@ -427,7 +431,7 @@
             else mostrarToast('❌ Error: '+result.error);
         }
 
-        // PDF a CSV manual: extrae texto y permite editar
+        // Extraer texto de PDF
         async function extraerTextoPDF(file) {
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
@@ -451,13 +455,9 @@
         }
 
         function textoACSV(texto) {
-            // Convierte texto plano a CSV simple: cada línea es un tema, módulo por defecto "Módulo 1"
             const lineas = texto.split(/\r?\n/).filter(l=>l.trim().length>10);
             const cabecera = "Modulo,Tema,Contenido,Arbol,Consideraciones,Biografia,Evaluacion\n";
-            let filas = lineas.map(linea => {
-                let contenido = linea.replace(/"/g, '""');
-                return `"Modulo 1","${escapeCsv(linea.substring(0,60))}","${escapeCsv(linea)}","","","",""`;
-            }).join("\n");
+            let filas = lineas.map(linea => `"Modulo 1","${escapeCsv(linea.substring(0,60))}","${escapeCsv(linea)}","","","",""`).join("\n");
             return cabecera + filas;
         }
         function escapeCsv(str) { return '"' + str.replace(/"/g, '""') + '"'; }
@@ -490,8 +490,13 @@
             }
         }
 
-        // UI
-        function cerrarModales() { document.getElementById('modalLogin').classList.remove('active'); document.getElementById('modalRegistro').classList.remove('active'); document.getElementById('modalPDFEditor').classList.remove('active'); }
+        // Inicialización de UI
+        function cerrarModales() {
+            document.getElementById('modalLogin').classList.remove('active');
+            document.getElementById('modalRegistro').classList.remove('active');
+            document.getElementById('modalGlosario').classList.remove('active');
+            document.getElementById('modalPDFEditor').classList.remove('active');
+        }
         function mostrarModalLogin() { document.getElementById('modalLogin').classList.add('active'); }
         function mostrarModalRegistro() { document.getElementById('modalRegistro').classList.add('active'); }
 
@@ -504,80 +509,70 @@
             document.getElementById('closeRegistroBtn').addEventListener('click', cerrarModales);
             document.getElementById('showRegisterLink').addEventListener('click', e=>{ e.preventDefault(); cerrarModales(); mostrarModalRegistro(); });
             document.getElementById('showLoginLink').addEventListener('click', e=>{ e.preventDefault(); cerrarModales(); mostrarModalLogin(); });
-            // Glosario
+            // Glosario modal
             document.getElementById('closeGlosarioBtn').addEventListener('click', ()=>document.getElementById('modalGlosario').classList.remove('active'));
-            document.getElementById('btnGlosario').addEventListener('click', ()=>{ document.getElementById('modalGlosario').classList.add('active'); if(!glosarioData.length) cargarGlosario(); });
-            document.getElementById('glosario-btn').addEventListener('click', async ()=>{ const txt = document.getElementById('glosario-buscar').value.toLowerCase(); const res = await fetch(`${API}/glosario`); const data = await res.json(); glosarioData=data; const filtrados = glosarioData.filter(g=>g.termino?.toLowerCase().includes(txt) || g.definicion?.toLowerCase().includes(txt)); document.getElementById('glosario-resultados').innerHTML = filtrados.map(g=>`<div class="card"><strong>${g.termino}</strong><br>${g.definicion}</div>`).join('')||'<p>No hay resultados</p>'; });
+            document.getElementById('btnGlosario').addEventListener('click', async ()=>{ await cargarGlosario(); document.getElementById('modalGlosario').classList.add('active'); });
+            document.getElementById('glosario-btn').addEventListener('click', () => {
+                const txt = document.getElementById('glosario-buscar').value.toLowerCase();
+                const filtrados = glosarioData.filter(g=>g.termino?.toLowerCase().includes(txt) || g.definicion?.toLowerCase().includes(txt));
+                const container = document.getElementById('glosario-resultados');
+                if (filtrados.length === 0) { container.innerHTML = '<p>No hay resultados</p>'; return; }
+                let html = '';
+                for (let g of filtrados) {
+                    html += `<div class="card"><strong>${escapeHtml(g.termino)}</strong><br>${escapeHtml(g.definicion)}</div>`;
+                }
+                container.innerHTML = html;
+            });
             // Tabs
             document.querySelectorAll('.tab-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ const tab=btn.getAttribute('data-tab'); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active')); document.getElementById(`tab-${tab}`).classList.add('active'); }); });
             // Modo oscuro
             const darkBtn = document.getElementById('darkModeToggle'); darkBtn.addEventListener('click', ()=>{ document.body.classList.toggle('dark-mode'); localStorage.setItem('darkMode', document.body.classList.contains('dark-mode')); }); if(localStorage.getItem('darkMode')==='true') document.body.classList.add('dark-mode');
-            // Drawer perfil
+            // Drawer
             const profileBtn = document.getElementById('profileBtn'), drawer = document.getElementById('profileDrawer'), overlay = document.getElementById('drawerOverlay'), closeDrawer = document.getElementById('closeDrawerBtn');
             profileBtn.onclick = ()=>{ drawer.classList.add('open'); overlay.classList.add('open'); };
             closeDrawer.onclick = ()=>{ drawer.classList.remove('open'); overlay.classList.remove('open'); };
             overlay.onclick = ()=>{ drawer.classList.remove('open'); overlay.classList.remove('open'); };
-            // Carga masiva CSV
+            // Administración
             const btnCarga = document.getElementById('btnCargaMasiva'), fileInput = document.getElementById('fileCursoInput');
             btnCarga.onclick = ()=>fileInput.click();
             fileInput.onchange = (e)=>{ if(e.target.files.length) cargarCursoMasivo(e.target.files[0]); fileInput.value=''; };
-            // Subir PDF
             const btnPDF = document.getElementById('btnSubirPDF'), pdfInput = document.getElementById('pdfInput');
             btnPDF.onclick = ()=>pdfInput.click();
             pdfInput.onchange = (e)=>{ if(e.target.files.length) procesarPDF(e.target.files[0]); pdfInput.value=''; };
+            const btnGlosarioCarga = document.getElementById('btnCargarGlosario'), glosarioInput = document.getElementById('glosarioInput');
+            if (btnGlosarioCarga && glosarioInput) {
+                btnGlosarioCarga.onclick = ()=>glosarioInput.click();
+                glosarioInput.onchange = async (e)=>{
+                    if (!e.target.files.length) return;
+                    const file = e.target.files[0];
+                    const text = await file.text();
+                    const res = await fetch(`${API}/cargar-glosario`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ adminCedula:usuarioActual?.cedula, csvContent:text }) });
+                    const result = await res.json();
+                    if (result.success) { mostrarToast(`✅ Glosario cargado: ${result.items} términos.`); await cargarGlosario(); }
+                    else mostrarToast('❌ Error: '+result.error);
+                    glosarioInput.value='';
+                };
+            }
             // Dropdown admin
             const adminBtn = document.getElementById('adminDropdownBtn');
             const adminMenu = document.getElementById('adminDropdownMenu');
             if (adminBtn && adminMenu) {
-                adminBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    adminMenu.style.display = adminMenu.style.display === 'none' ? 'block' : 'none';
-                });
-                document.addEventListener('click', function(event) {
-                    if (!adminBtn.contains(event.target) && !adminMenu.contains(event.target)) {
-                        adminMenu.style.display = 'none';
-                    }
-                });
+                adminBtn.addEventListener('click', (e) => { e.stopPropagation(); adminMenu.style.display = adminMenu.style.display === 'none' ? 'block' : 'none'; });
+                document.addEventListener('click', function(event) { if (!adminBtn.contains(event.target) && !adminMenu.contains(event.target)) adminMenu.style.display = 'none'; });
             }
         }
 
-        async function cargarGlosario() { try { const res = await fetch(`${API}/glosario`); glosarioData = await res.json(); } catch(e){} }
-
-        // Al cargar la página, forzar limpieza de sesiones de estudiantes para evitar quedar atrapado
-        document.addEventListener('DOMContentLoaded', ()=>{
+        document.addEventListener('DOMContentLoaded', () => {
             initUI();
             const usuarioGuardado = localStorage.getItem('nexus_usuario');
             if (usuarioGuardado) {
                 const usuario = JSON.parse(usuarioGuardado);
-                // Si el rol es estudiante, eliminamos la sesión para que aparezca el login
-                if (usuario.rol === 'estudiante') {
-                    localStorage.removeItem('nexus_usuario');
-                    mostrarModalLogin();
-                } else {
-                    usuarioActual = usuario;
-                    document.getElementById('user-name-display').innerText = usuarioActual.nombre || usuarioActual.cedula;
-                    if (usuarioActual.rol === 'admin') document.getElementById('admin-panel').style.display = 'block';
-                    cargarProgresoLocal();
-                    cargarContenidoCurso();
-                }
-            } else {
-                mostrarModalLogin();
-                cargarContenidoCurso(); // cargar contenido por defecto mientras no haya login (se mostrará tras login)
-            }
+                if (usuario.rol === 'estudiante') { localStorage.removeItem('nexus_usuario'); mostrarModalLogin(); }
+                else { usuarioActual = usuario; document.getElementById('user-name-display').innerText = usuarioActual.nombre || usuarioActual.cedula; if (usuarioActual.rol === 'admin') document.getElementById('admin-panel').style.display = 'block'; cargarProgresoLocal(); }
+            } else { mostrarModalLogin(); }
+            cargarContenidoCurso();
+            cargarGlosario();
         });
     </script>
-    <!-- Modal editor CSV (añadido al final del body) -->
-    <div id="modalPDFEditor" class="modal">
-        <div class="modal-content" style="max-width: 90%; width:auto;">
-            <span class="close-modal" id="closePDFModal">&times;</span>
-            <h3>✏️ Editar CSV generado desde PDF</h3>
-            <p>Puede modificar las columnas (Módulo, Tema, Contenido, Árbol, Consideraciones, Biografía, Evaluación)</p>
-            <textarea id="csvEditorText" rows="15" style="width:100%; background:#0a0f1f; color:#eee; font-family:monospace;"></textarea>
-            <div style="display:flex; gap:1rem; margin-top:1rem;">
-                <button id="btnGuardarCSV" style="background:#10b981;">📥 Cargar este curso</button>
-                <button id="btnCancelarCSV" style="background:#555;">Cancelar</button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
